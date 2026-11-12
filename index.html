@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>학생 운동 기록장</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800">
+
+    <!-- Header -->
+    <header class="bg-blue-600 text-white shadow-md">
+        <div class="max-w-4xl mx-auto px-4 py-6 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <span class="text-3xl">🏅</span>
+                <div>
+                    <h1 class="text-2xl font-bold">우리반 운동 기록장</h1>
+                    <p class="text-blue-100 text-sm">학생들의 체육 활동 기록을 실시간으로 남겨보세요!</p>
+                </div>
+            </div>
+            <div class="bg-blue-500 px-4 py-2 rounded-xl text-sm font-medium shadow-inner">
+                체육 선생님 모드 👨‍🏫
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-4xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+        
+        <!-- Form Section (Left Column) -->
+        <section class="md:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-fit">
+            <h2 class="text-lg font-bold mb-4 flex items-center justify-between text-slate-700">
+                <span class="flex items-center"><span class="mr-2 text-blue-500">📝</span> 운동 기록 입력</span>
+                <span id="syncIndicator" class="text-xs text-slate-400 font-normal">연동됨 🟢</span>
+            </h2>
+            
+            <form id="recordForm" onsubmit="addRecord(event)" class="space-y-4">
+                <!-- Student Selection -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">학생 이름</label>
+                    <select id="studentName" required class="w-full rounded-xl border border-slate-200 p-3 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                        <option value="" disabled selected>학생 명단을 불러오는 중...</option>
+                    </select>
+                </div>
+
+                <!-- Sport Category -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">운동 종목</label>
+                    <select id="sportType" required class="w-full rounded-xl border border-slate-200 p-3 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" onchange="updateUnit()">
+                        <option value="" disabled selected>종목을 선택하세요</option>
+                        <option value="달리기">🏃 달리기</option>
+                        <option value="축구">⚽ 축구</option>
+                        <option value="줄넘기">🪢 줄넘기</option>
+                    </select>
+                </div>
+
+                <!-- Record Value -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1" id="recordLabel">기록/수치</label>
+                    <input type="text" id="recordValue" required placeholder="예: 100m 14초 / 골 2개 / 150회" class="w-full rounded-xl border border-slate-200 p-3 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                </div>
+
+                <!-- Notes / Comments -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">소감 또는 특이사항</label>
+                    <textarea id="recordNote" rows="3" placeholder="오늘 운동하면서 느낀 점이나 특이사항을 적어주세요." class="w-full rounded-xl border border-slate-200 p-3 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition duration-200 flex items-center justify-center space-x-2">
+                    <span>기록 추가하기</span>
+                    <span>✨</span>
+                </button>
+            </form>
+        </section>
+
+        <!-- List Section (Right Column) -->
+        <section class="md:col-span-2 space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-bold flex items-center text-slate-700">
+                    <span class="mr-2 text-blue-500">📊</span> 입력된 기록 목록 <span id="recordCount" class="ml-2 text-sm bg-blue-100 text-blue-600 px-2.5 py-0.5 rounded-full font-semibold">0건</span>
+                </h2>
+                <button onclick="fetchData()" class="text-xs text-blue-600 hover:text-blue-700 font-medium px-3 py-1.5 border border-blue-200 rounded-lg hover:bg-blue-50 transition flex items-center space-x-1">
+                    <span>🔄 새로고침</span>
+                </button>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="bg-white rounded-2xl p-12 text-center border border-slate-100 shadow-sm">
+                <div class="text-3xl mb-3 animate-spin">⏳</div>
+                <p class="text-slate-500 font-medium">구글 시트에서 데이터를 불러오는 중...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="bg-white rounded-2xl p-12 text-center border border-slate-100 shadow-sm hidden">
+                <div class="text-4xl mb-3">📭</div>
+                <p class="text-slate-500 font-medium">아직 등록된 운동 기록이 없습니다.</p>
+                <p class="text-slate-400 text-sm mt-1">왼쪽 폼을 통해 학생들의 기록을 추가해보세요!</p>
+            </div>
+
+            <!-- Record List Container -->
+            <div id="recordList" class="space-y-3">
+                <!-- Dynamic records will be injected here -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer Note -->
+    <footer class="text-center py-6 text-slate-400 text-sm">
+        <p>우리반 체육 활동 기록 도우미 (Google Apps Script 연동)</p>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyXomWwWNFQjUMtZtCwwrb4rte5l7HlMjrqjsI2djyka_WWj7kUAxm80B3N2KY7obngEQ/exec";
+        
+        let records = [];
+        let students = [];
+
+        // 페이지 로드 시 데이터 가져오기
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchData();
+        });
+
+        async function fetchData() {
+            const loadingState = document.getElementById('loadingState');
+            loadingState.style.display = 'block';
+            
+            try {
+                const response = await fetch(WEB_APP_URL);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    students = data.students || [];
+                    records = data.records || [];
+                    updateStudentDropdown();
+                    renderRecords();
+                }
+            } catch (error) {
+                console.error("데이터 로드 실패:", error);
+                alert("구글 시트에서 데이터를 불러오지 못했습니다. 네트워크 연결을 확인해주세요.");
+            } finally {
+                loadingState.style.display = 'none';
+            }
+        }
+
+        function updateStudentDropdown() {
+            const select = document.getElementById('studentName');
+            select.innerHTML = '<option value="" disabled selected>학생을 선택하세요</option>';
+            
+            students.forEach(student => {
+                const option = document.createElement('option');
+                option.value = student.name;
+                option.textContent = `${student.number}번 ${student.name}`;
+                select.appendChild(option);
+            });
+        }
+
+        function updateUnit() {
+            const sport = document.getElementById('sportType').value;
+            const inputField = document.getElementById('recordValue');
+            if (sport === '달리기') {
+                inputField.placeholder = "예: 50m 8.5초 또는 100m 15초";
+            } else if (sport === '축구') {
+                inputField.placeholder = "예: 2골 1어시스트 또는 패스 성공률 80%";
+            } else if (sport === '줄넘기') {
+                inputField.placeholder = "예: 2분 동안 180회 성공";
+            }
+        }
+
+        async function addRecord(event) {
+            event.preventDefault();
+
+            const studentName = document.getElementById('studentName').value;
+            const sportType = document.getElementById('sportType').value;
+            const recordValue = document.getElementById('recordValue').value;
+            const recordNote = document.getElementById('recordNote').value || "특이사항 없음";
+            
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span>저장 중...</span> ⏳';
+
+            try {
+                // CORS 에러 방지를 위한 커스텀 헤더 없는 기본 fetch POST 요청
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name: studentName,
+                        sport: sportType,
+                        record: `${recordValue} (${recordNote})`
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    // 성공 시 폼 초기화 및 데이터 재조회
+                    document.getElementById('recordForm').reset();
+                    await fetchData();
+                } else {
+                    alert("저장에 실패했습니다: " + result.message);
+                }
+            } catch (error) {
+                console.error("저장 오류:", error);
+                alert("서버 통신 중 오류가 발생했습니다.");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        }
+
+        function renderRecords() {
+            const listContainer = document.getElementById('recordList');
+            const emptyState = document.getElementById('emptyState');
+            const recordCount = document.getElementById('recordCount');
+
+            recordCount.innerText = `${records.length}건`;
+
+            if (records.length === 0) {
+                emptyState.style.display = 'block';
+                listContainer.innerHTML = '';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            listContainer.innerHTML = '';
+
+            records.forEach(record => {
+                let badgeColor = 'bg-blue-100 text-blue-600';
+                let icon = '🏃';
+                if (record.sport === '축구') {
+                    badgeColor = 'bg-emerald-100 text-emerald-600';
+                    icon = '⚽';
+                } else if (record.sport === '줄넘기') {
+                    badgeColor = 'bg-amber-100 text-amber-600';
+                    icon = '🪢';
+                }
+
+                const card = document.createElement('div');
+                card.className = 'bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-start justify-between transition hover:shadow-md';
+                card.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-1 rounded-lg text-xs font-bold ${badgeColor}">${icon} ${record.sport}</span>
+                            <h3 class="font-bold text-slate-800 text-base">${record.name}</h3>
+                            <span class="text-xs text-slate-400">${record.timestamp || ''}</span>
+                        </div>
+                        <div class="text-slate-700 font-medium text-sm bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                            🎯 기록: <span class="text-blue-600 font-bold">${record.record}</span>
+                        </div>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>
